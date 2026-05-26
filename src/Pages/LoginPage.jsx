@@ -27,7 +27,7 @@ const LoginPage = () => {
         "password": formData.get('password')
     }
 
-    try{
+    try {
         const res = await Backend.post('/login', userData)
         const role  = res.data.role
 
@@ -41,11 +41,9 @@ const LoginPage = () => {
             console.log("no user");
             
         }
-    }catch(error){
-        toast.error("Login Faild")
+    } catch (error) {
+      console.log(error);
     }
-    
-    
   }
 
   return (

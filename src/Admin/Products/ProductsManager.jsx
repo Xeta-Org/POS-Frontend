@@ -29,8 +29,6 @@ const ProductManager = () => {
   const fetchProducts = async() => {
     try{
       const response = await Backend.get('/products');
-      console.log(response.data);
-      
       setProducts(response.data);
       setLoading(false);
     }catch(error){
