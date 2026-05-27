@@ -7,14 +7,16 @@ import Backend from '../../Api/Backend.jsx';
 import {FadeLoader} from 'react-spinners';
 import ProductModel from '../../Components/Models/ProductModel.jsx';
 import ProductsTable from '../../Components/Tables/ProductsTable.jsx';
+import { useDispatch, useSelector } from 'react-redux';
+import { addProduct, deleteProduct, getAllProducts, productActions, updateProduct } from '../../store/ProductSlice.js';
 
 const ProductManager = () => {
-  const [products, setProducts] = useState(null);
-  const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [isModalOpen, setIsModalOpen] = useState(false);
-  const [currentProduct, setCurrentProduct] = useState(null);
   const barcodeRef = useRef(null);
+
+  const { loading, products, currentProduct } = useSelector((state) => state.product)
+  const dispatch = useDispatch()
 
   useEffect(() => {
     if (isModalOpen && barcodeRef.current) {
@@ -28,24 +30,21 @@ const ProductManager = () => {
 
   const fetchProducts = async() => {
     try{
-      const response = await Backend.get('/products');
-      setProducts(response.data);
-      setLoading(false);
+      await dispatch(getAllProducts()).unwrap()
     }catch(error){
       toast.error('Failed to fetch products.');
     }
   }
 
   const handleOpenModal = (product = null) => {
-    setCurrentProduct(product);
-    setIsModalOpen(true);
+    dispatch(productActions.modelOpen(product))
+    setIsModalOpen(true)
   };
 
   const handleDelete = async(barcode) => {
     try{
-      const response = await Backend.delete(`/product/${barcode}`);
-      toast.success(response?.data?.message || 'Product deleted successfully!');
-      fetchProducts();
+      const result = await dispatch(deleteProduct(barcode)).unwrap()
+      toast.success(result?.data?.message || 'Product deleted successfully!');
     }catch(error){
       toast.error(error?.response?.data?.message || 'Failed to delete product.');
     }
@@ -65,17 +64,15 @@ const ProductManager = () => {
 
     try{
         if(currentProduct){
-          const updateResponse = await Backend.put(`/product/${currentProduct.barcode}`, productData);
+          const updateResponse = await dispatch(updateProduct({productData: productData, barcode: currentProduct.barcode})).unwrap()
           toast.success(updateResponse?.data?.message || 'Product updated successfully!');
           setIsModalOpen(false);
-          fetchProducts();
         }else{
-          const addProductResponse = await Backend.post('/products', productData);
-          toast.success(addProductResponse?.data?.message || 'Product added successfully!');
+          const addProductResponse = await dispatch(addProduct(productData)).unwrap()
+          toast.success(addProductResponse?.message || 'Product added successfully!');
           setIsModalOpen(false);
-          fetchProducts();
         }
-    }catch(error){
+    } catch (error) {
         toast.error(error?.response?.data?.message || 'Failed to add product.');
     }
     
