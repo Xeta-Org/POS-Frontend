@@ -5,14 +5,14 @@ import toast from 'react-hot-toast';
 import { FadeLoader } from 'react-spinners';
 import UserModel from '../../Components/Models/UserModel.jsx';
 import UserTable from '../../Components/Tables/UserTable.jsx';
-
+import { useDispatch, useSelector } from 'react-redux'
+import { addUser, deleteUser, getAllUsers, updateUser, userActions } from '../../store/UserSlice.js'
 const UserManagement = () => {
-  const [users, setUsers] = useState(null);
-  const [loading, setLoading] = useState(true);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
-  const [currentUser, setCurrentUser] = useState(null);
   const [searchTerm, setSearchTerm] = useState('');
+  const dispatch = useDispatch()
+  const { loading, users, currentUser } = useSelector((state) => state.user)
 
   useEffect(() => {
     fetchUsers();
@@ -20,16 +20,14 @@ const UserManagement = () => {
 
   const fetchUsers = async() => {
     try{
-      const getUserRespone = await Backend.get('/users');
-      setUsers(getUserRespone.data);
-      setLoading(false);
+      await dispatch(getAllUsers()).unwrap()
     }catch(error){
       toast.error('Failed to fetch users.');
     }
   }
 
   const handleOpenModal = (user = null) => {
-    setCurrentUser(user);
+    dispatch(userActions.setCurrentUser(user))
     setIsModalOpen(true);
   };
 
@@ -40,14 +38,12 @@ const UserManagement = () => {
     
     try {
       if(currentUser){
-        const userUpdateResponse = await Backend.put(`/user/${currentUser.id}`, userData);
+        const userUpdateResponse = await dispatch(updateUser({userDetails: userData, userId: currentUser.id})).unwrap()
         toast.success(userUpdateResponse?.data?.message || 'User updated successfully!');
-        fetchUsers();
         setIsModalOpen(false);
       }else{
-        const createUserResponse = await Backend.post('/add-user', userData);
+        const createUserResponse = await dispatch(addUser(userData)).unwrap()
         toast.success(createUserResponse?.data?.message || 'User created successfully!');
-        fetchUsers();
         setIsModalOpen(false);
       }
     } catch (err) {
@@ -55,12 +51,11 @@ const UserManagement = () => {
     }
   };
 
-  const deleteUser = async (userId) => {
-    try{
-      const userDeleteResponse = await Backend.delete(`/user/${userId}`)
+  const handleDeleteUser = async (userId) => {
+    try {
+      const userDeleteResponse = await dispatch(deleteUser(userId)).unwrap()
       toast.success(userDeleteResponse?.data?.message || 'User deleted successfully!');
-      fetchUsers();
-    }catch(error){
+    } catch (error) {
       toast.error('Failed to delete user.');
     }
   }
@@ -109,7 +104,7 @@ const UserManagement = () => {
           </div>) : (<UserTable
             filteredUsers={filteredUsers}
             handleOpenModal={handleOpenModal}
-            deleteUser={deleteUser}
+            deleteUser={handleDeleteUser}
           />)}
         </div>
       </div>
