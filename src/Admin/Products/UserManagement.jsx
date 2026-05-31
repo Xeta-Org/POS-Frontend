@@ -7,16 +7,46 @@ import UserModel from '../../Components/Models/UserModel.jsx';
 import UserTable from '../../Components/Tables/UserTable.jsx';
 import { useDispatch, useSelector } from 'react-redux'
 import { addUser, deleteUser, getAllUsers, updateUser, userActions } from '../../store/UserSlice.js'
+import { z } from 'zod';
+import { useForm } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
 const UserManagement = () => {
   const [isModalOpen, setIsModalOpen] = useState(false);
-  const [showPassword, setShowPassword] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
   const dispatch = useDispatch()
   const { loading, users, currentUser } = useSelector((state) => state.user)
 
+  const userSchema = z.object({
+    first_name: z.string({required_error: 'First name is required'}).min(1, 'First name cannot be empty'),
+    last_name: z.string({required_error: 'Last name is required'}).min(1, 'Last name cannot be empty'),
+    username: z.string({required_error: 'Username is required'}).min(3, 'Username must be at least 3 characters long'),
+    role: z.enum(['Admin', 'Cashier', 'Manager'], { message: 'Invalid role selected' }),
+    status: z.enum(['Active', 'Inactive'], { message: 'Invalid status selected' }),
+    password: z.string().min(6, 'Password must be at least 6 characters long')
+  })
+
+  const { register, handleSubmit, reset, formState: { errors } } = useForm({
+    resolver: zodResolver(userSchema)
+  })
+
   useEffect(() => {
     fetchUsers();
   }, [])
+
+  useEffect(() => { 
+    if (currentUser) {
+      reset(currentUser)
+    } else { 
+      reset({
+        first_name: '',
+        last_name: '',
+        username: '',
+        role: 'Cashier',
+        status: 'Active',
+        password: ''
+      })
+    }
+  }, [isModalOpen, currentUser])
 
   const fetchUsers = async() => {
     try{
@@ -28,14 +58,11 @@ const UserManagement = () => {
 
   const handleOpenModal = (user = null) => {
     dispatch(userActions.setCurrentUser(user))
-    setIsModalOpen(true);
+    setIsModalOpen(!isModalOpen);
   };
 
-  const handleSaveUser = async (e) => {
-    e.preventDefault();
-    const data = new FormData(e.target);
-    const userData = Object.fromEntries(data.entries());
-    
+  const handleSaveUser = async (data) => {
+    const userData = data
     try {
       if(currentUser){
         const userUpdateResponse = await dispatch(updateUser({userDetails: userData, userId: currentUser.id})).unwrap()
@@ -111,11 +138,11 @@ const UserManagement = () => {
 
       {/* --- Create/Edit User Modal --- */}
       {isModalOpen && (<UserModel
-        setIsModalOpen={setIsModalOpen}
+        setIsModalOpen={handleOpenModal}
         currentUser={currentUser}
-        handleSaveUser={handleSaveUser}
-        showPassword={showPassword}
-        setShowPassword={setShowPassword}
+        handleSaveUser={handleSubmit(handleSaveUser)}
+        register={register}
+        errors={errors}
       />
       )}
     </div>

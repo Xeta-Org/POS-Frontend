@@ -146,9 +146,11 @@ const UserSlice = createSlice({
         .addCase(updateUser.fulfilled, (state, action) => {
             const updateUserIndex = state.users.findIndex((user) => user.id == action.payload.user.id)
             state.users[updateUserIndex] = action.payload.user
+            state.currentUser = null
             state.loading = false
         })
         .addCase(updateUser.rejected, (state, action) => { 
+            state.currentUser = null
             state.loading = false
         })
     } 
